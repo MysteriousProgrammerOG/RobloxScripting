@@ -1,3 +1,5 @@
+-- This is an Admin Kill Handler, Built for my killstreak game, it allows the admin to give themselves as many kills as they wish, and this script handles it making sure nothign goes wrong.
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
@@ -117,4 +119,5 @@ event.OnServerEvent:Connect(function(admin, killType, amount, targetName)
 	elseif killType == "LBKills" then
 		GivePlayerLBKills(target, amount)
 	end
+
 end)
