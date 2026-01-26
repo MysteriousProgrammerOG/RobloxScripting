@@ -1,3 +1,5 @@
+-- Basic Admin GUI Giver
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local AdminList = require(script.Parent:WaitForChild("AdminList"))
@@ -10,4 +12,5 @@ Players.PlayerAdded:Connect(function(player)
 		gui.Parent = player:WaitForChild("PlayerGui")
 		gui.ResetOnSpawn = false
 	end
+
 end)
