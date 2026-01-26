@@ -1,3 +1,5 @@
+-- This is a killstreak sword system made by Zamiko. Built off roblox's classic sword script, i created one whole modular Killstreak system, witha  full Kill Function, admin functionality, and a full phase tabel, as wlel as other things to make it work competely. as long as you know what your doing, it should work no problem.
+
 Tool = script.Parent
 Handle = Tool:WaitForChild("Handle")
 
@@ -404,7 +406,7 @@ function Kill(amount, isAdmin) -- The kill function is what handels EVERYTHING, 
 	if phase.WalkSpeed then Hum.WalkSpeed = phase.WalkSpeed end
 	if phase.JumpPower then Hum.JumpPower = phase.JumpPower end
 	if phase.MaxHealth then
-		-- Be careful changing MaxHealth while Health > MaxHealth — clamp safely
+		-- Be careful changing MaxHealth while Health > MaxHealth Â— clamp safely
 		Hum.MaxHealth = phase.MaxHealth
 		if Hum.Health > Hum.MaxHealth then
 			Hum.Health = Hum.MaxHealth
@@ -412,7 +414,7 @@ function Kill(amount, isAdmin) -- The kill function is what handels EVERYTHING, 
 	end
 	if phase.CurrentHealth then Hum.Health = math.min(phase.CurrentHealth, Hum.MaxHealth) end
 
-	-- Phase damage overrides (if present) — only on change so they don't get re-set each kill
+	-- Phase damage overrides (if present) Â— only on change so they don't get re-set each kill
 	if phase.BaseDamage then DamageValues.BaseDamage = phase.BaseDamage end
 	if phase.SlashDamage then DamageValues.SlashDamage = phase.SlashDamage end
 	if phase.LungeDamage then DamageValues.LungeDamage = phase.LungeDamage end
@@ -799,4 +801,5 @@ remote.Parent = Tool
 -- Updated to accept amount
 remote.OnInvoke = function(amount, isAdmin)
 	Kill(amount, isAdmin)
+
 end
