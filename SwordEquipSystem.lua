@@ -1,3 +1,5 @@
+-- Sword Equiping System By Zamiko -- This script will change the leader stat (if it exist) the the equipped sowrd. 
+
 local function onSwordEquipRequest(player, standName)
 	print("RemoteEvent fired! Player:", player.Name, "Stand:", standName)
 
@@ -26,4 +28,5 @@ local function onSwordEquipRequest(player, standName)
 	if successSound then
 		successSound:Play()
 	end
+
 end
