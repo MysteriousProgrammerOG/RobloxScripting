@@ -1,3 +1,5 @@
+-- Leaderboard Stat Tracker by Zamiko - This script tracks leaderboard stats and updates them accordingly, and saves apon leaving.
+
 local DataStoreService = game:GetService("DataStoreService")
 local killsDataStore = DataStoreService:GetDataStore("KillsDataStore")
 
@@ -50,4 +52,5 @@ game.Players.PlayerRemoving:Connect(function(player)
 			warn("Failed to save kills for " .. player.Name .. ": " .. errorMessage)
 		end
 	end
+
 end)
