@@ -1,3 +1,5 @@
+-- Basic Meet The Owner badge, but allowing multiple UserIDs incase the game has multiple owners (or owner alt accounts)
+
 local ownersIds = {3972688973, 5146822757} -- add all owner/alt account IDs here
 local badgeId = 3925121998198832
 
