@@ -126,10 +126,10 @@ local Scripts = {
         end, -- Loopbring - 6
         function() loadstring(game:HttpGet("https://raw.githubusercontent.com/iamrobloxstudio/OG1-Hub-Scripts/refs/heads/main/Antti-Lag", true))() 
         end, -- Anti Lag - 7
-        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/TheOneWhoAlwaysWatches/Roblox-Scripts/refs/heads/main/God%20Mode.lua", true))() 
-        end -- Loopkill - 8
-        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/TheOneWhoAlwaysWatches/Roblox-Scripts/refs/heads/main/God%20Mode.lua", true))() 
-        end -- Looptools - 0
+        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/MysteriousProgrammerOG/RobloxScripting/refs/heads/KillstreakSystemScripting/Loopkill", true))() 
+        end, -- Loopkill - 8
+        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/MysteriousProgrammerOG/RobloxScripting/refs/heads/KillstreakSystemScripting/Looptools", true))() 
+        end, -- Looptools - 0
     },
 }
 
