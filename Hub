@@ -1,0 +1,186 @@
+--// UI Initialization
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "SPTHub"
+
+--// Main Frame
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 620, 0, 370)
+MainFrame.Position = UDim2.new(0.5, -290, 0.5, -175)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 0, 0)
+MainFrame.BorderColor3 = Color3.fromRGB(255, 0, 0)
+MainFrame.BorderSizePixel = 3
+MainFrame.Visible = true
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Name = "MainFrame"
+MainFrame.ClipsDescendants = true
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = MainFrame
+
+--// Toggle Button
+local Toggle = Instance.new("TextButton", ScreenGui)
+Toggle.Size = UDim2.new(0, 40, 0, 40)
+Toggle.Position = UDim2.new(0, 10, 0.5, -20)
+Toggle.BackgroundColor3 = Color3.fromRGB(30, 0, 0)
+Toggle.Text = "≡"
+Toggle.TextColor3 = Color3.fromRGB(255, 0, 0)
+Toggle.TextScaled = true
+Toggle.Active = true
+Toggle.Draggable = true
+
+Toggle.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Title
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Position = UDim2.new(0, 20, 0, 0) -- Nudges the title 20 pixels to the right
+Title.BackgroundTransparency = 1
+Title.Text = "SPT HUB"
+Title.Font = Enum.Font.Arcade
+Title.TextScaled = true
+Title.TextColor3 = Color3.fromRGB(255, 0, 0)
+Title.TextXAlignment = Enum.TextXAlignment.Center
+
+--// Page Buttons Frame
+local PageButtons = Instance.new("Frame", MainFrame)
+PageButtons.Size = UDim2.new(0, 120, 1, -40)
+PageButtons.Position = UDim2.new(0, 0, 0, 40)
+PageButtons.BackgroundTransparency = 1
+
+--// Divider Line between page buttons and scripts
+local divider = Instance.new("Frame", MainFrame)
+divider.Size = UDim2.new(0, 3, 1, -40)
+divider.Position = UDim2.new(0, 125, 0, 40)
+divider.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+divider.BorderSizePixel = 0
+
+--// Page Table
+local Pages = {}
+local currentPage = nil
+
+--// Page Creation Function
+local function createPage(name)
+    local Page = Instance.new("Frame", MainFrame)
+    Page.Size = UDim2.new(1, -135, 1, -40)
+    Page.Position = UDim2.new(0, 130, 0, 40)
+    Page.BackgroundTransparency = 1
+    Page.Visible = (currentPage == nil)
+    Page.Name = name
+    Pages[name] = Page
+    if not currentPage then currentPage = name end
+    return Page
+end
+
+--// Create Pages with custom names
+createPage("Main")
+createPage("Misc Scripts")
+createPage("Other Hubs")
+createPage("Tips")
+
+local pageOrder = {"Main", "Tips", "Misc Scripts", "Other Hubs"}
+local buttonIndex = 0
+
+for _, name in ipairs(pageOrder) do
+    local page = Pages[name]
+    local btn = Instance.new("TextButton", PageButtons)
+    btn.Size = UDim2.new(1, -20, 0, 40)
+    btn.Position = UDim2.new(0, 10, 0, buttonIndex * 50)
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(255, 0, 0)
+    btn.Font = Enum.Font.Arcade
+    btn.TextScaled = true
+    btn.BackgroundColor3 = Color3.fromRGB(30, 0, 0)
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        for pageName, frame in pairs(Pages) do
+            frame.Visible = (pageName == name)
+        end
+        currentPage = name
+    end)
+
+    buttonIndex += 1
+end
+
+--// Script Functions organized by page
+local Scripts = {
+    ["Main"] = {
+        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/MysteriousProgrammerOG/RobloxScripting/refs/heads/KillstreakSystemScripting/Get%20Base",true))() 
+        end, -- Get Base - 1
+        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/MysteriousProgrammerOG/RobloxScripting/refs/heads/KillstreakSystemScripting/Use%20Tools%20%2B%20Aura", true))() 
+        end, -- Use Tools - 2
+        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/MysteriousProgrammerOG/RobloxScripting/refs/heads/KillstreakSystemScripting/Get%20Tools", true))() 
+        end, -- Get Tools - 3
+        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/MysteriousProgrammerOG/RobloxScripting/refs/heads/KillstreakSystemScripting/No%20Cooldown", true))() 
+        end, -- No Cooldown - 4
+        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/MysteriousProgrammerOG/RobloxScripting/refs/heads/KillstreakSystemScripting/Respawn", true))() 
+        end, -- Respawn - 5
+        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/MysteriousProgrammerOG/RobloxScripting/refs/heads/KillstreakSystemScripting/Loopbring", true))() 
+        end, -- Loopbring - 6
+        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/iamrobloxstudio/OG1-Hub-Scripts/refs/heads/main/Antti-Lag", true))() 
+        end, -- Anti Lag - 7
+        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/TheOneWhoAlwaysWatches/Roblox-Scripts/refs/heads/main/God%20Mode.lua", true))() 
+        end -- Loopkill - 8
+        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/TheOneWhoAlwaysWatches/Roblox-Scripts/refs/heads/main/God%20Mode.lua", true))() 
+        end -- Looptools - 0
+    },
+}
+
+local tips = {
+    "Tip 1 --> Dont die :]"
+}
+
+for i, tipText in ipairs(tips) do
+    local tipLabel = Instance.new("TextLabel", Pages["Tips"])
+    tipLabel.Size = UDim2.new(1, -20, 0, 30)
+    tipLabel.Position = UDim2.new(0, 10, 0, (i - 1) * 35)
+    tipLabel.BackgroundTransparency = 1
+    tipLabel.Text = tipText
+    tipLabel.Font = Enum.Font.Arcade
+    tipLabel.TextScaled = true
+    tipLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+    tipLabel.TextXAlignment = Enum.TextXAlignment.Left
+end
+
+--// Button Factory using Scripts table
+local function pagedButton(pageName, label, pos, scriptIndex)
+    local btn = Instance.new("TextButton", Pages[pageName])
+    btn.Size = UDim2.new(0, 150, 0, 40)
+    btn.Position = pos
+    btn.Text = label
+    btn.Font = Enum.Font.Arcade
+    btn.TextColor3 = Color3.fromRGB(255, 0, 0)
+    btn.TextScaled = true
+    btn.BackgroundColor3 = Color3.fromRGB(20, 0, 0)
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        local pageScripts = Scripts[pageName]
+        if pageScripts and pageScripts[scriptIndex] then
+            pageScripts[scriptIndex]()
+        else
+            print("Script not found for button:", label)
+        end
+    end)
+end
+
+--// Main Scripts buttons
+pagedButton("Main", "Get Base", UDim2.new(0, 10, 0, 10), 1)
+pagedButton("Main", "Use Tools ", UDim2.new (0, 170, 0, 10), 2)
+pagedButton("Main", "Get Tools", UDim2.new(0, 330, 0, 10), 3)
+pagedButton("Main", "No Cooldown", UDim2.new(0, 170, 0, 60), 4)
+pagedButton("Main", "Respawn", UDim2.new(0, 330, 0, 60), 5)
+pagedButton("Main", "Loopbring", UDim2.new(0, 170, 0, 60), 6)
+pagedButton("Main", "Anti Lag", UDim2.new(0, 10, 0, 110), 7)
+pagedButton("Main", "Loopkill", UDim2.new(0, 170, 0, 110), 8)
+pagedButton("Main", "Looptools", UDim2.new(0, 330, 0, 110), 9)
