@@ -1,0 +1,181 @@
+-- ==========================================
+-- UNIVERSAL SERVICE & PLAYER DECLARATIONS
+-- ==========================================
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
+
+-- ==========================================
+-- SCRIPT 1: ULTRA-FAST AUTOMATIC RESPAWN
+-- ==========================================
+_G.RespawnScript = _G.RespawnScript or { Active = false, Connections = {} }
+
+local function disconnectAll()
+    for _, conn in ipairs(_G.RespawnScript.Connections) do
+        if conn and conn.Connected then
+            conn:Disconnect()
+        end
+    end
+    _G.RespawnScript.Connections = {}
+end
+
+local function forceRespawn()
+    task.spawn(function()
+        local guide = ReplicatedStorage:FindFirstChild("Guide")
+        if guide then guide:FireServer() end
+    end)
+    
+    task.spawn(function()
+        if LocalPlayer and LocalPlayer:FindFirstChild("LoadCharacter") then
+            LocalPlayer:LoadCharacter()
+        end
+    end)
+end
+
+local function onCharacterAdded(character)
+    if not _G.RespawnScript.Active then return end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 0.5)
+    if not humanoid then return end
+
+    local hasRespawned = false
+    local function trigger()
+        if not hasRespawned and _G.RespawnScript.Active then
+            hasRespawned = true
+            forceRespawn()
+        end
+    end
+
+    -- 1. Heartbeat check (Executes directly before engine physics step)
+    local hbConn
+    hbConn = RunService.Heartbeat:Connect(function()
+        if humanoid.Health <= 1 then
+            trigger()
+            hbConn:Disconnect()
+        end
+    end)
+    table.insert(_G.RespawnScript.Connections, hbConn)
+
+    -- 2. Immediate memory-level health monitoring
+    table.insert(_G.RespawnScript.Connections, humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+        if humanoid.Health <= 1 then
+            trigger()
+        end
+    end))
+
+    -- 3. Pre-emptive removal trick: destroy humanoid root on death to cut ragdoll animation latency
+    table.insert(_G.RespawnScript.Connections, humanoid.Died:Connect(function()
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if root then root:Destroy() end
+        trigger()
+    end))
+end
+
+local function initRespawnScript()
+    if _G.RespawnScript.Active then
+        _G.RespawnScript.Active = false
+        disconnectAll()
+        print("[RespawnScript] Disabled")
+    else
+        _G.RespawnScript.Active = true
+        
+        table.insert(_G.RespawnScript.Connections, LocalPlayer.CharacterAdded:Connect(onCharacterAdded))
+
+        if LocalPlayer.Character then
+            task.spawn(onCharacterAdded, LocalPlayer.Character)
+        else
+            forceRespawn()
+        end
+        print("[RespawnScript] Enabled (Ultra-Fast)")
+    end
+end
+
+-- ==========================================
+-- SCRIPT 2: MOBILE NOCLIP WITH GUI TOGGLE
+-- ==========================================
+local NoclipConnection = nil
+_G.NoclipActive = _G.NoclipActive or false 
+
+-- Create Screen GUI (Protects against deletion in some executors)
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
+
+-- Setup GUI Properties
+ScreenGui.Name = "NoclipMobileGui"
+-- Attaches to CoreGui so it persists, falls back to PlayerGui if restricted
+local success, err = pcall(function() ScreenGui.Parent = CoreGui end)
+if not success then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+-- Setup Button Properties
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 75, 75) -- Starts red (Off)
+ToggleButton.Position = UDim2.new(0.05, 0, 0.4, 0) -- Left-middle side of screen
+ToggleButton.Size = UDim2.new(0, 100, 0, 50)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.Text = "Noclip: OFF"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 18
+ToggleButton.Active = true
+ToggleButton.Draggable = true -- Allows you to drag the button around your screen
+
+-- Round the button corners
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = ToggleButton
+
+local function startNoclip()
+	if NoclipConnection then NoclipConnection:Disconnect() end
+	
+	NoclipConnection = RunService.Stepped:Connect(function()
+		if _G.NoclipActive and LocalPlayer.Character then
+			for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
+				if v:IsA("BasePart") and v.CanCollide then
+					v.CanCollide = false
+				end
+			end
+		end
+	end)
+end
+
+local function stopNoclip()
+	if NoclipConnection then
+		NoclipConnection:Disconnect()
+		NoclipConnection = nil
+	end
+	if LocalPlayer.Character then
+		for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.CanCollide = true
+			end
+		end
+	end
+end
+
+-- Update button look based on state
+local function updateButton()
+	if _G.NoclipActive then
+		ToggleButton.Text = "Noclip: ON"
+		ToggleButton.BackgroundColor3 = Color3.fromRGB(75, 255, 75) -- Green
+		startNoclip()
+	else
+		ToggleButton.Text = "Noclip: OFF"
+		ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 75, 75) -- Red
+		stopNoclip()
+	end
+end
+
+-- Mobile tap listener
+ToggleButton.MouseButton1Click:Connect(function()
+	_G.NoclipActive = not _G.NoclipActive
+	updateButton()
+end)
+
+-- ==========================================
+-- EXECUTION INITIALIZATION
+-- ==========================================
+-- Start both features
+initRespawnScript()
+updateButton()
