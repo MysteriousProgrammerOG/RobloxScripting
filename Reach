@@ -1,0 +1,245 @@
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+
+local originalProperties = {}
+local activeReachTools = {} 
+local sizeSetting = 9 
+
+-- UI Framework Setup
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ReachSelectorGUI"
+screenGui.ResetOnSpawn = false 
+screenGui.Parent = CoreGui 
+
+-- Main Wrapper Frame
+local container = Instance.new("Frame")
+container.Size = UDim2.new(0, 240, 0, 40)
+container.Position = UDim2.new(0.05, 0, 0.4, 0)
+container.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+container.BorderSizePixel = 0
+container.Active = true 
+container.Parent = screenGui
+
+-- Dedicated Drag Anchor Handle (Far Left)
+local dragHandle = Instance.new("Frame")
+dragHandle.Size = UDim2.new(0, 30, 1, 0)
+dragHandle.Position = UDim2.new(0, 0, 0, 0)
+dragHandle.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+dragHandle.BorderSizePixel = 0
+dragHandle.Parent = container
+
+local dragIcon = Instance.new("TextLabel")
+dragIcon.Size = UDim2.new(1, 0, 1, 0)
+dragIcon.BackgroundTransparency = 1
+dragIcon.Text = "☰"
+dragIcon.TextColor3 = Color3.fromRGB(200, 200, 200)
+dragIcon.TextSize = 18
+dragIcon.Font = Enum.Font.SourceSansBold
+dragIcon.Parent = dragHandle
+
+-- Main Button (Shifted Right)
+local mainButton = Instance.new("TextButton")
+mainButton.Size = UDim2.new(1, -30, 1, 0)
+mainButton.Position = UDim2.new(0, 30, 0, 0)
+mainButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+mainButton.Text = "Select Reach Items ▼"
+mainButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+mainButton.Font = Enum.Font.SourceSansBold
+mainButton.TextSize = 16
+mainButton.BorderSizePixel = 0
+mainButton.Parent = container
+
+-- Dropdown Sub-Menu
+local dropdownList = Instance.new("Frame")
+dropdownList.Size = UDim2.new(1, 0, 0, 0)
+dropdownList.Position = UDim2.new(0, 0, 1, 0)
+dropdownList.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+dropdownList.BorderSizePixel = 0
+dropdownList.Visible = false
+dropdownList.Parent = container
+
+local uiListLayout = Instance.new("UIListLayout")
+uiListLayout.Parent = dropdownList
+uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- DRAGGING ENGINE (Bound strictly to the drag handle to prevent button overriding)
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    container.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+dragHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = container.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+dragHandle.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Reach Logic Execution
+local function applyReach(tool)
+    if tool:IsA("Tool") and tool:FindFirstChild("Handle") then
+        local handle = tool.Handle
+
+        if not originalProperties[tool] then
+            originalProperties[tool] = {
+                Size = handle.Size,
+                GripPos = tool.GripPos
+            }
+        end
+
+        handle.Size = Vector3.new(0.5, 0.5, sizeSetting)
+        tool.GripPos = Vector3.new(0, 0, 0)
+
+        if not handle:FindFirstChild("SelectionBox") then
+            local selectionBox = Instance.new("SelectionBox")
+            selectionBox.Name = "SelectionBox"
+            selectionBox.Adornee = handle
+            selectionBox.Color3 = Color3.fromRGB(255, 0, 0)
+            selectionBox.Parent = handle
+        end
+        if not handle:FindFirstChild("AntiLag") then
+            local antiLag = Instance.new("BoolValue")
+            antiLag.Name = "AntiLag"
+            antiLag.Parent = handle
+        end
+    end
+end
+
+local function restoreOriginalProperties(tool)
+    if tool:IsA("Tool") and tool:FindFirstChild("Handle") and originalProperties[tool] then
+        local handle = tool.Handle
+        local props = originalProperties[tool]
+
+        handle.Size = props.Size
+        tool.GripPos = props.GripPos
+
+        if handle:FindFirstChild("SelectionBox") then handle.SelectionBox:Destroy() end
+        if handle:FindFirstChild("AntiLag") then handle.AntiLag:Destroy() end
+
+        originalProperties[tool] = nil
+    end
+end
+
+-- Refresh and Rebuild UI Dropdown List
+local function updateDropdown()
+    for _, child in ipairs(dropdownList:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+
+    local itemsFound = {}
+    local locations = {player:FindFirstChild("Backpack"), player.Character}
+
+    for _, containerObj in ipairs(locations) do
+        if containerObj then
+            for _, tool in ipairs(containerObj:GetChildren()) do
+                if tool:IsA("Tool") and not itemsFound[tool.Name] then
+                    itemsFound[tool.Name] = true
+
+                    local itemButton = Instance.new("TextButton")
+                    itemButton.Size = UDim2.new(1, 0, 0, 30)
+                    itemButton.Font = Enum.Font.SourceSans
+                    itemButton.TextSize = 14
+                    itemButton.BorderSizePixel = 0
+                    
+                    if activeReachTools[tool.Name] then
+                        itemButton.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+                        itemButton.Text = tool.Name .. " [REACH ON]"
+                        itemButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    else
+                        itemButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                        itemButton.Text = tool.Name .. " [OFF]"
+                        itemButton.TextColor3 = Color3.fromRGB(180, 180, 180)
+                    end
+
+                    itemButton.MouseButton1Click:Connect(function()
+                        local targetTool = player.Backpack:FindFirstChild(tool.Name) or (player.Character and player.Character:FindFirstChild(tool.Name))
+                        
+                        if activeReachTools[tool.Name] then
+                            activeReachTools[tool.Name] = nil
+                            if targetTool then restoreOriginalProperties(targetTool) end
+                        else
+                            activeReachTools[tool.Name] = true
+                            if targetTool then applyReach(targetTool) end
+                        end
+                        updateDropdown()
+                    end)
+
+                    itemButton.Parent = dropdownList
+                end
+            end
+        end
+    end
+
+    local count = 0
+    for _ in pairs(itemsFound) do count = count + 1 end
+    dropdownList.Size = UDim2.new(1, 0, 0, count * 30)
+end
+
+mainButton.MouseButton1Click:Connect(function()
+    dropdownList.Visible = not dropdownList.Visible
+    if dropdownList.Visible then updateDropdown() end
+end)
+
+-- Asset Event Connectors
+local function monitorBackpack(backpack)
+    backpack.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") then
+            if activeReachTools[child.Name] then
+                applyReach(child)
+            end
+            if dropdownList.Visible then updateDropdown() end
+        end
+    end)
+    backpack.ChildRemoved:Connect(function() 
+        if dropdownList.Visible then updateDropdown() end 
+    end)
+end
+
+local function onCharacterAdded(character)
+    character:WaitForChild("HumanoidRootPart")
+    
+    character.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") and activeReachTools[child.Name] then
+            applyReach(child)
+        end
+    end)
+
+    character.ChildRemoved:Connect(function(child)
+        if child:IsA("Tool") then
+            restoreOriginalProperties(child)
+        end
+    end)
+end
+
+player.CharacterAdded:Connect(onCharacterAdded)
+if player.Character then onCharacterAdded(player.Character) end
+
+player.ChildAdded:Connect(function(child)
+    if child:IsA("Backpack") then
+        monitorBackpack(child)
+    end
+end)
+if player:FindFirstChild("Backpack") then monitorBackpack(player.Backpack) end
