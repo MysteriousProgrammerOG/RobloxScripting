@@ -1,0 +1,274 @@
+-- CONFIG
+local auraRange = 25 -- Max distance to enemy
+local auraSize = Vector3.new(25, 25, 25) -- Aura box around tool
+local attackRate = 0.0001 -- Speed of the loop (seconds)
+
+-- SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- STATE
+local killAuraActive = false 
+local auraParams = OverlapParams.new()
+auraParams.FilterType = Enum.RaycastFilterType.Include
+
+-- CRIMSON COLOR PALETTE
+local CrimsonDark = Color3.fromRGB(20, 0, 0)
+local CrimsonMain = Color3.fromRGB(150, 0, 20)
+local CrimsonBright = Color3.fromRGB(220, 20, 40)
+local GrayBg = Color3.fromRGB(30, 25, 25)
+
+-- CREATE BASE GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "UseToolsV2Gui"
+ScreenGui.ResetOnSpawn = false
+if syn and syn.protect_gui then syn.protect_gui(ScreenGui) end
+ScreenGui.Parent = CoreGui:FindFirstChild("RobloxGui") or CoreGui
+
+-- MOBILE-FRIENDLY DRAG FUNCTION
+local function makeDraggable(frame)
+    local dragging, dragInput, dragStart, startPos
+
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale, 
+                startPos.X.Offset + delta.X, 
+                startPos.Y.Scale, 
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+-- 1. MAIN PANEL (usetools v2)
+local MainPanel = Instance.new("Frame")
+MainPanel.Size = UDim2.new(0, 220, 0, 110)
+MainPanel.Position = UDim2.new(0.35, 0, 0.4, 0)
+MainPanel.BackgroundColor3 = CrimsonDark
+MainPanel.BorderSizePixel = 0
+MainPanel.Visible = false 
+MainPanel.Parent = ScreenGui
+makeDraggable(MainPanel)
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainPanel
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 2
+MainStroke.Color = CrimsonMain
+MainStroke.Parent = MainPanel
+
+-- Main Title
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(0.75, 0, 0, 35)
+TitleLabel.Position = UDim2.new(0.05, 0, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "usetools v2"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 16
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = MainPanel
+
+-- Close/Toggle Button inside GUI Panel
+local ClosePanelButton = Instance.new("TextButton")
+ClosePanelButton.Size = UDim2.new(0, 25, 0, 25)
+ClosePanelButton.Position = UDim2.new(0.85, 0, 0.08, 0)
+ClosePanelButton.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
+ClosePanelButton.Text = "×"
+ClosePanelButton.TextColor3 = CrimsonBright
+ClosePanelButton.Font = Enum.Font.GothamBold
+ClosePanelButton.TextSize = 18
+ClosePanelButton.BorderSizePixel = 0
+ClosePanelButton.Parent = MainPanel
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = ClosePanelButton
+
+-- Kill Aura Toggle Button (Inside Main Panel)
+local AuraToggleButton = Instance.new("TextButton")
+AuraToggleButton.Size = UDim2.new(0.9, 0, 0, 45)
+AuraToggleButton.Position = UDim2.new(0.05, 0, 0.45, 0)
+AuraToggleButton.BackgroundColor3 = GrayBg
+AuraToggleButton.Text = "Kill Aura: OFF"
+AuraToggleButton.TextColor3 = CrimsonBright
+AuraToggleButton.Font = Enum.Font.GothamBold
+AuraToggleButton.TextSize = 14
+AuraToggleButton.BorderSizePixel = 0
+AuraToggleButton.Parent = MainPanel
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0, 8)
+ButtonCorner.Parent = AuraToggleButton
+
+local ButtonStroke = Instance.new("UIStroke")
+ButtonStroke.Thickness = 1.5
+ButtonStroke.Color = CrimsonMain
+ButtonStroke.Parent = AuraToggleButton
+
+
+-- 2. FLOATING MENU ICON BUTTON (To open/re-open menu)
+local MenuToggleButton = Instance.new("TextButton")
+MenuToggleButton.Size = UDim2.new(0, 55, 0, 55)
+MenuToggleButton.Position = UDim2.new(0.05, 0, 0.2, 0)
+MenuToggleButton.BackgroundColor3 = CrimsonDark
+MenuToggleButton.Text = "⚙️"
+MenuToggleButton.TextSize = 24
+MenuToggleButton.BorderSizePixel = 0
+MenuToggleButton.Parent = ScreenGui
+makeDraggable(MenuToggleButton)
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(1, 0)
+ToggleCorner.Parent = MenuToggleButton
+
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Thickness = 2
+ToggleStroke.Color = CrimsonMain
+ToggleStroke.Parent = MenuToggleButton
+
+
+-- HELPERS
+local function getChar(plr) return plr and plr.Character end
+local function getHRP(plr)
+    local char = getChar(plr)
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function getValidTargets()
+    local myHRP = getHRP(LocalPlayer)
+    if not myHRP then return {}, {} end
+
+    local playersInRange, chars = {}, {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local hrp = getHRP(player)
+            if hrp and (hrp.Position - myHRP.Position).Magnitude <= auraRange then
+                table.insert(playersInRange, player)
+                local char = getChar(player)
+                if char then table.insert(chars, char) end
+            end
+        end
+    end
+    return playersInRange, chars
+end
+
+local function getTouchPart(tool)
+    local touchTransmitter = tool and tool:FindFirstChildWhichIsA("TouchTransmitter", true)
+    return touchTransmitter and touchTransmitter.Parent
+end
+
+-- INVENTORY AUTO-EQUIP ENGINE
+local function equipAllTools(char)
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if backpack then
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                tool.Parent = char
+            end
+        end
+    end
+end
+
+-- PERSISTENT RECURSIVE ENGINE THREAD
+task.spawn(function()
+    while true do
+        if killAuraActive then
+            local myChar = getChar(LocalPlayer)
+            if myChar then
+                -- Automatically pull all tools out of backpack into character model
+                equipAllTools(myChar)
+
+                local targets, enemyChars = getValidTargets()
+                auraParams.FilterDescendantsInstances = enemyChars
+
+                for _, tool in ipairs(myChar:GetChildren()) do
+                    if tool:IsA("Tool") then
+                        local fightEvent = tool:FindFirstChild("FightEvent")
+                        local touchPart = getTouchPart(tool)
+
+                        tool:Activate()
+
+                        if fightEvent then
+                            fightEvent:FireServer()
+                        end
+
+                        if touchPart then
+                            local partsInBox = workspace:GetPartBoundsInBox(
+                                touchPart.CFrame,
+                                touchPart.Size + auraSize,
+                                auraParams
+                            )
+
+                            for _, part in ipairs(partsInBox) do
+                                local model = part:FindFirstAncestorWhichIsA("Model")
+                                if model and table.find(enemyChars, model) then
+                                    firetouchinterest(touchPart, part, 1)
+                                    firetouchinterest(touchPart, part, 0)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(attackRate)
+    end
+end)
+
+-- INTERACTION: FLOATING GEAR BUTTON (OPENS MENU)
+MenuToggleButton.MouseButton1Click:Connect(function()
+    MainPanel.Visible = not MainPanel.Visible
+    TweenService:Create(MenuToggleButton, TweenInfo.new(0.1), {BackgroundColor3 = CrimsonMain}):Play()
+    task.wait(0.1)
+    TweenService:Create(MenuToggleButton, TweenInfo.new(0.1), {BackgroundColor3 = CrimsonDark}):Play()
+end)
+
+-- INTERACTION: INTERNAL TOGGLE BUTTON (CLOSES MENU)
+ClosePanelButton.MouseButton1Click:Connect(function()
+    MainPanel.Visible = false
+end)
+
+-- INTERACTION: CORE KILL AURA SWITCH CONTROL
+AuraToggleButton.MouseButton1Click:Connect(function()
+    killAuraActive = not killAuraActive
+    
+    local targetBgColor = killAuraActive and Color3.fromRGB(45, 10, 15) or GrayBg
+    local targetTextColor = killAuraActive and Color3.fromRGB(100, 255, 100) or CrimsonBright
+    local targetStrokeColor = killAuraActive and Color3.fromRGB(100, 255, 100) or CrimsonMain
+    
+    TweenService:Create(AuraToggleButton, TweenInfo.new(0.2), {BackgroundColor3 = targetBgColor, TextColor3 = targetTextColor}):Play()
+    TweenService:Create(ButtonStroke, TweenInfo.new(0.2), {Color = targetStrokeColor}):Play()
+    
+    AuraToggleButton.Text = killAuraActive and "Kill Aura: ON" or "Kill Aura: OFF"
+end)
+
+print("usetools v2: Multi-Tool Inventory Spammer Loaded!")
