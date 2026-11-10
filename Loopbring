@@ -1,0 +1,324 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+
+-- Store loopbring states and offset values
+local LoopBrings = {}
+local targetDistance = 3 -- Default distance (Z axis)
+local targetOffset = 0   -- Default horizontal offset (X axis)
+
+-- Theme Colors (Dark Red / Cartoony)
+local BgColor       = Color3.fromRGB(35, 10, 15)
+local CardBg        = Color3.fromRGB(50, 15, 22)
+local ThickBorder   = Color3.fromRGB(15, 0, 5)
+local AccentRed     = Color3.fromRGB(235, 35, 65)
+local ActiveGreen   = Color3.fromRGB(45, 215, 110)
+local TextColor     = Color3.fromRGB(255, 230, 235)
+local YellowAccent  = Color3.fromRGB(255, 210, 60)
+
+-- Clean up any existing instance
+if CoreGui:FindFirstChild("LoopBringGUI") then
+    CoreGui.LoopBringGUI:Destroy()
+end
+
+-- Create ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "LoopBringGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+-- Main Control Bar
+local ToggleFrame = Instance.new("Frame")
+ToggleFrame.Name = "ToggleFrame"
+ToggleFrame.Size = UDim2.new(0, 240, 0, 36)
+ToggleFrame.Position = UDim2.new(0, 20, 0, 20) 
+ToggleFrame.BackgroundColor3 = BgColor
+ToggleFrame.BorderSizePixel = 0
+ToggleFrame.ClipsDescendants = false
+ToggleFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = ToggleFrame
+
+-- Thick Cartoon Border
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Thickness = 3
+ToggleStroke.Color = ThickBorder
+ToggleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+ToggleStroke.Parent = ToggleFrame
+
+-- Layout for Control Buttons
+local ButtonLayout = Instance.new("UIListLayout")
+ButtonLayout.FillDirection = Enum.FillDirection.Horizontal
+ButtonLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ButtonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+ButtonLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+ButtonLayout.Padding = UDim.new(0, 4)
+ButtonLayout.Parent = ToggleFrame
+
+-- Helper function to create stylish cartoony buttons
+local function createBarButton(text, width, order)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(0, width, 0, 28)
+    container.BackgroundTransparency = 1
+    container.LayoutOrder = order
+    container.Parent = ToggleFrame
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 1, 0)
+    btn.BackgroundColor3 = CardBg
+    btn.Text = text
+    btn.Font = Enum.Font.FredokaOne
+    btn.TextSize = 13
+    btn.TextColor3 = TextColor
+    btn.AutoButtonColor = false
+    btn.Parent = container
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = btn
+
+    local btnStroke = Instance.new("UIStroke")
+    btnStroke.Thickness = 2
+    btnStroke.Color = ThickBorder
+    btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    btnStroke.Parent = btn
+
+    -- Cartoony Hover & Click Animation
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Back), {
+            BackgroundColor3 = AccentRed,
+            Size = UDim2.new(1, 2, 1, 2),
+            Position = UDim2.new(0, -1, 0, -1)
+        }):Play()
+    end)
+
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.1), {
+            BackgroundColor3 = CardBg,
+            Size = UDim2.new(1, 0, 1, 0),
+            Position = UDim2.new(0, 0, 0, 0)
+        }):Play()
+    end)
+
+    btn.MouseButton1Down:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.05), {
+            Size = UDim2.new(0.9, 0, 0.9, 0),
+            Position = UDim2.new(0.05, 0, 0.05, 0)
+        }):Play()
+    end)
+
+    return btn
+end
+
+-- Create Bar Buttons
+local ToggleButton = createBarButton("LOOPBRING", 92, 1)
+local LeftButton   = createBarButton("<", 26, 2)
+local RightButton  = createBarButton(">", 26, 3)
+local MinusButton  = createBarButton("-", 26, 4)
+local PlusButton   = createBarButton("+", 26, 5)
+
+ToggleButton.TextColor3 = YellowAccent
+
+-- Button Listeners
+LeftButton.MouseButton1Click:Connect(function()
+    targetOffset = math.clamp(targetOffset - 1, -25, 25)
+end)
+
+RightButton.MouseButton1Click:Connect(function()
+    targetOffset = math.clamp(targetOffset + 1, -25, 25)
+end)
+
+MinusButton.MouseButton1Click:Connect(function()
+    targetDistance = math.clamp(targetDistance - 1, 1, 50)
+end)
+
+PlusButton.MouseButton1Click:Connect(function()
+    targetDistance = math.clamp(targetDistance + 1, 1, 50)
+end)
+
+-- Player List Panel
+local Frame = Instance.new("Frame")
+Frame.Name = "PlayerListFrame"
+Frame.Size = UDim2.new(0, 240, 0, 0)
+Frame.Position = UDim2.new(0, 20, 0, 62)
+Frame.BackgroundColor3 = BgColor
+Frame.BorderSizePixel = 0
+Frame.ClipsDescendants = true
+Frame.Visible = false
+Frame.Parent = ScreenGui
+
+local UICornerFrame = Instance.new("UICorner")
+UICornerFrame.CornerRadius = UDim.new(0, 10)
+UICornerFrame.Parent = Frame
+
+local FrameStroke = Instance.new("UIStroke")
+FrameStroke.Thickness = 3
+FrameStroke.Color = ThickBorder
+FrameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+FrameStroke.Parent = Frame
+
+local ListFrame = Instance.new("ScrollingFrame")
+ListFrame.Size = UDim2.new(1, -16, 1, -16)
+ListFrame.Position = UDim2.new(0, 8, 0, 8)
+ListFrame.BackgroundTransparency = 1
+ListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ListFrame.ScrollBarThickness = 6
+ListFrame.ScrollBarImageColor3 = AccentRed
+ListFrame.Parent = Frame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.FillDirection = Enum.FillDirection.Vertical
+UIListLayout.Padding = UDim.new(0, 6)
+UIListLayout.SortOrder = Enum.SortOrder.Name
+UIListLayout.Parent = ListFrame
+
+UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ListFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
+end)
+
+-- Smooth Animated Toggle
+local isOpened = false
+local function toggleVisibility()
+    isOpened = not isOpened
+    local targetSize = isOpened and UDim2.new(0, 240, 0, 200) or UDim2.new(0, 240, 0, 0)
+    
+    if isOpened then Frame.Visible = true end
+    
+    local tween = TweenService:Create(Frame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = targetSize})
+    tween:Play()
+    
+    if not isOpened then
+        tween.Completed:Connect(function()
+            if not isOpened then
+                Frame.Visible = false
+            end
+        end)
+    end
+end
+
+ToggleButton.MouseButton1Click:Connect(toggleVisibility)
+
+------------------------------------------------------------
+-- LOOPBRING RUNSERVICE LOOP
+------------------------------------------------------------
+RunService.PreRender:Connect(function()
+    local myChar = LocalPlayer.Character
+    if not myChar then return end
+    local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return end
+
+    local targetCFrame = myHRP.CFrame * CFrame.new(targetOffset, 0, -targetDistance)
+
+    for userId, isActive in pairs(LoopBrings) do
+        if isActive then
+            local targetPlayer = Players:GetPlayerByUserId(userId)
+            if targetPlayer and targetPlayer.Character then
+                local targetHRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                local targetHum = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+                
+                if targetHRP then
+                    targetHRP.CFrame = targetCFrame
+                    targetHRP.AssemblyLinearVelocity = Vector3.zero
+                    targetHRP.AssemblyAngularVelocity = Vector3.zero
+                    
+                    if targetHum then
+                        targetHum.WalkSpeed = 0
+                        targetHum.JumpPower = 0
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- LoopBring toggle logic
+local function loopBring(targetPlayer, button)
+    local stroke = button:FindFirstChildOfClass("UIStroke")
+    
+    if LoopBrings[targetPlayer.UserId] then
+        LoopBrings[targetPlayer.UserId] = nil
+        button.Text = targetPlayer.Name
+        button.BackgroundColor3 = CardBg
+        button.TextColor3 = TextColor
+        if stroke then stroke.Color = ThickBorder end
+        
+        if targetPlayer.Character then
+            local hum = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.WalkSpeed = 16
+                hum.JumpPower = 50
+            end
+        end
+        return
+    end
+    
+    LoopBrings[targetPlayer.UserId] = true
+    button.Text = "★ " .. targetPlayer.Name
+    button.BackgroundColor3 = AccentRed
+    button.TextColor3 = YellowAccent
+    if stroke then stroke.Color = ThickBorder end
+end
+
+-- Refresh player list
+local function updatePlayerList()
+    for _, child in ipairs(ListFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local playerButton = Instance.new("TextButton")
+            playerButton.Name = player.Name
+            playerButton.Size = UDim2.new(1, 0, 0, 30)
+            playerButton.BackgroundColor3 = LoopBrings[player.UserId] and AccentRed or CardBg
+            playerButton.TextColor3 = LoopBrings[player.UserId] and YellowAccent or TextColor
+            playerButton.Font = Enum.Font.FredokaOne
+            playerButton.TextSize = 13
+            playerButton.AutoButtonColor = false
+            playerButton.Text = (LoopBrings[player.UserId] and "★ " or "") .. player.Name
+            
+            local UICornerPlayer = Instance.new("UICorner")
+            UICornerPlayer.CornerRadius = UDim.new(0, 8)
+            UICornerPlayer.Parent = playerButton
+            
+            local ButtonStroke = Instance.new("UIStroke")
+            ButtonStroke.Thickness = 2
+            ButtonStroke.Color = ThickBorder
+            ButtonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            ButtonStroke.Parent = playerButton
+            
+            playerButton.MouseEnter:Connect(function()
+                if not LoopBrings[player.UserId] then
+                    TweenService:Create(playerButton, TweenInfo.new(0.1), {BackgroundColor3 = AccentRed}):Play()
+                end
+            end)
+            
+            playerButton.MouseLeave:Connect(function()
+                if not LoopBrings[player.UserId] then
+                    TweenService:Create(playerButton, TweenInfo.new(0.1), {BackgroundColor3 = CardBg}):Play()
+                end
+            end)
+            
+            playerButton.MouseButton1Click:Connect(function()
+                loopBring(player, playerButton)
+            end)
+            
+            playerButton.Parent = ListFrame
+        end
+    end
+end
+
+-- Event Listeners
+Players.PlayerAdded:Connect(updatePlayerList)
+Players.PlayerRemoving:Connect(function(player)
+    LoopBrings[player.UserId] = nil
+    updatePlayerList()
+end)
+
+updatePlayerList()
