@@ -1,0 +1,285 @@
+-- ============================
+-- ⚡ Aura Core Configuration
+-- ============================
+
+local auraRange = math.huge
+local auraSize = Vector3.new(30, 30, 30)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local lp = Players.LocalPlayer
+local PlayerGui = lp:WaitForChild("PlayerGui")
+
+-- Global state
+local Disable = Instance.new("BindableEvent")
+getgenv().configs = {
+	connections = {},
+	Disable = Disable,
+	Size = auraSize,
+	TargetList = {},
+}
+
+local Run = true
+local Ignorelist = OverlapParams.new()
+Ignorelist.FilterType = Enum.RaycastFilterType.Include
+
+-- ============================
+-- 🔧 Helper Functions
+-- ============================
+
+local function getchar(plr)
+	return (plr or lp).Character
+end
+
+local function GetTouchInterest(tool)
+	for _, obj in ipairs(tool:GetDescendants()) do
+		if obj:IsA("TouchTransmitter") and obj.Parent:IsA("BasePart") then
+			return obj.Parent
+		end
+	end
+end
+
+local function GetCharacters()
+	local t = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= lp and p.Character and p.Character:FindFirstChild("Humanoid") then
+			if p.Character.Humanoid.Health > 0 then
+				table.insert(t, p.Character)
+			end
+		end
+	end
+	return t
+end
+
+local function Attack(tool, touch, part)
+	if tool:IsDescendantOf(workspace) then
+		firetouchinterest(touch, part, 1)
+		firetouchinterest(touch, part, 0)
+	end
+end
+
+local function ApplyDamageInstant(tool, touch)
+	local parts = workspace:GetPartBoundsInBox(
+		touch.CFrame,
+		touch.Size + getgenv().configs.Size,
+		Ignorelist
+	)
+
+	for _, p in ipairs(parts) do
+		local char = p:FindFirstAncestorWhichIsA("Model")
+		if char then
+			for _, target in ipairs(getgenv().configs.TargetList) do
+				if target.Character == char then
+					Attack(tool, touch, p)
+					break
+				end
+			end
+		end
+	end
+end
+
+-- Disable hook
+table.insert(getgenv().configs.connections,
+	Disable.Event:Connect(function()
+		Run = false
+	end)
+)
+
+-- ============================
+-- 🖤❤️ Red Theme UI (Top Middle)
+-- ============================
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AuraGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+-- === Toggle Button (Top Middle) ===
+local AuraBtn = Instance.new("TextButton")
+AuraBtn.Parent = ScreenGui
+AuraBtn.Size = UDim2.fromOffset(120, 36)
+AuraBtn.Position = UDim2.new(0.5, 0, 0, 10)
+AuraBtn.AnchorPoint = Vector2.new(0.5, 0)
+AuraBtn.Text = "TARGET AURA"
+AuraBtn.Font = Enum.Font.GothamBold
+AuraBtn.TextSize = 13
+AuraBtn.AutoButtonColor = false
+
+AuraBtn.BackgroundColor3 = Color3.fromRGB(15, 8, 8)
+AuraBtn.TextColor3 = Color3.fromRGB(255, 200, 200)
+
+Instance.new("UICorner", AuraBtn).CornerRadius = UDim.new(0, 12)
+
+local BtnStroke = Instance.new("UIStroke", AuraBtn)
+BtnStroke.Color = Color3.fromRGB(255, 50, 50)
+BtnStroke.Thickness = 1.4
+BtnStroke.Transparency = 0.15
+
+-- === Player List Panel (Under Button) ===
+local PlayerFrame = Instance.new("Frame")
+PlayerFrame.Parent = ScreenGui
+PlayerFrame.Size = UDim2.fromOffset(180, 280)
+PlayerFrame.AnchorPoint = Vector2.new(0.5, 0)
+PlayerFrame.Position = UDim2.new(0.5, 0, 0, 52)
+PlayerFrame.Visible = false
+
+PlayerFrame.BackgroundColor3 = Color3.fromRGB(10, 6, 6)
+PlayerFrame.BackgroundTransparency = 0.05
+
+Instance.new("UICorner", PlayerFrame).CornerRadius = UDim.new(0, 16)
+
+local FrameStroke = Instance.new("UIStroke", PlayerFrame)
+FrameStroke.Color = Color3.fromRGB(255, 50, 50)
+FrameStroke.Thickness = 1.4
+FrameStroke.Transparency = 0.2
+
+local Layout = Instance.new("UIListLayout", PlayerFrame)
+Layout.Padding = UDim.new(0, 6)
+Layout.SortOrder = Enum.SortOrder.LayoutOrder
+Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- Padding container for frame content
+local UIPadding = Instance.new("UIPadding", PlayerFrame)
+UIPadding.PaddingTop = UDim.new(0, 6)
+UIPadding.PaddingBottom = UDim.new(0, 6)
+
+-- ============================
+-- 👥 Player Button Factory
+-- ============================
+
+local function createPlayerButton(plr)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, -12, 0, 26)
+	btn.Text = plr.Name
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 13
+	btn.AutoButtonColor = false
+
+	btn.BackgroundColor3 = Color3.fromRGB(18, 12, 12)
+	btn.TextColor3 = Color3.fromRGB(255, 215, 215)
+
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+
+	local stroke = Instance.new("UIStroke", btn)
+	stroke.Thickness = 1
+	stroke.Color = Color3.fromRGB(255, 80, 80)
+	stroke.Transparency = 0.45
+
+	btn.MouseButton1Click:Connect(function()
+		local list = getgenv().configs.TargetList
+		local idx = table.find(list, plr)
+
+		if idx then
+			table.remove(list, idx)
+			btn.BackgroundColor3 = Color3.fromRGB(18, 12, 12)
+			stroke.Color = Color3.fromRGB(255, 80, 80)
+		else
+			table.insert(list, plr)
+			btn.BackgroundColor3 = Color3.fromRGB(45, 20, 20)
+			stroke.Color = Color3.fromRGB(255, 100, 100)
+		end
+	end)
+
+	return btn
+end
+
+local function UpdatePlayers()
+	for _, c in ipairs(PlayerFrame:GetChildren()) do
+		if c:IsA("TextButton") then
+			c:Destroy()
+		end
+	end
+
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= lp then
+			createPlayerButton(p).Parent = PlayerFrame
+		end
+	end
+end
+
+-- Toggle panel
+AuraBtn.MouseButton1Click:Connect(function()
+	PlayerFrame.Visible = not PlayerFrame.Visible
+	if PlayerFrame.Visible then
+		UpdatePlayers()
+	end
+end)
+
+Players.PlayerAdded:Connect(UpdatePlayers)
+Players.PlayerRemoving:Connect(UpdatePlayers)
+
+-- ============================
+-- ⚡ OPTIMIZED TARGET AURA CORE
+-- ============================
+
+local lastFire = 0
+local FIRE_RATE = 1/35 -- stable sweet spot
+
+local MAX_PARTS_PER_TARGET = 4
+
+local function getTargets()
+	local t = {}
+
+	for _, plr in ipairs(getgenv().configs.TargetList) do
+		local char = plr.Character
+		if char and char:FindFirstChild("HumanoidRootPart") then
+			local hum = char:FindFirstChild("Humanoid")
+			if hum and hum.Health > 0 then
+				table.insert(t, char)
+			end
+		end
+	end
+
+	return t
+end
+
+local PRIORITY_PARTS = {
+	"HumanoidRootPart",
+	"Head",
+	"UpperTorso",
+	"LowerTorso"
+}
+
+local function hitTarget(tool, touch, char)
+
+	for i = 1, #PRIORITY_PARTS do
+		local part = char:FindFirstChild(PRIORITY_PARTS[i])
+
+		if part and part:IsA("BasePart") then
+			firetouchinterest(touch, part, 0)
+			firetouchinterest(touch, part, 1)
+		end
+	end
+end
+
+RunService.PreSimulation:Connect(function()
+
+	if not Run then return end
+	if #getgenv().configs.TargetList == 0 then return end
+
+	local now = os.clock()
+	if now - lastFire < FIRE_RATE then return end
+	lastFire = now
+
+	local char = getchar()
+	if not char then return end
+
+	local targets = getTargets()
+	if #targets == 0 then return end
+
+	-- ⚡ STABILIZATION (CRITICAL)
+	RunService.PostSimulation:Wait()
+
+	for _, tool in ipairs(char:GetChildren()) do
+		if tool:IsA("Tool") then
+
+			local touch = GetTouchInterest(tool)
+			if not touch then continue end
+
+			for _, targetChar in ipairs(targets) do
+				hitTarget(tool, touch, targetChar)
+			end
+		end
+	end
+end)
