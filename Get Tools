@@ -1,0 +1,128 @@
+-- Modernized High-Performance Touch Engine (Luau Strict)
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+-- Local Player Reference
+local localPlayer = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+
+-- Modern Fire Touch Interest Resolver
+local fireTouch: ((BasePart, BasePart, number) -> ())? = firetouchinterest 
+    or (getgenv and (getgenv().firetouchinterest or getgenv().fire_touch_interest))
+    or (syn and syn.firetouchinterest)
+
+if not fireTouch then
+    warn("[Touch Engine] FireTouchInterest executor closure not found. Aborting execution.")
+    return
+end
+
+-- Filter Sets (Lookup maps)
+local EXCLUDED_BASES = {
+    ["Insanity"] = true,
+    ["Giant"]    = true,
+    ["Dark"]     = true,
+    ["Spike"]    = true,
+    ["Web"]      = true,
+    ["Strong"]   = true,
+}
+
+local ALLOWED_BASES = {
+    ["Stone"] = true,
+    ["Magic"] = true,
+    ["Storm"] = true,
+}
+
+-- Workspace Targets
+local tycoons: Instance = Workspace:FindFirstChild("Tycoons") or Workspace
+
+-- Cache Arrays
+local touchableParts: { BasePart } = {}
+local partCount: number = 0
+
+-- Fast Part Verification & Register
+local function evaluateAndAdd(descendant: Instance)
+    if not descendant:IsA("TouchTransmitter") then return end
+    
+    local parent = descendant.Parent
+    if not (parent and parent:IsA("BasePart")) then return end
+    
+    local gearGiver = parent.Parent
+    if not (gearGiver and string.find(gearGiver.Name, "GearGiver1", 1, true)) then return end
+    
+    local baseFolder = gearGiver.Parent
+    local baseName = baseFolder and baseFolder.Name
+    
+    -- Filter check: Whitelisted OR Not explicitly blacklisted
+    if baseName and (ALLOWED_BASES[baseName] or not EXCLUDED_BASES[baseName]) then
+        partCount += 1
+        touchableParts[partCount] = parent
+        
+        -- Auto-clean array when part is destroyed/removed
+        parent.AncestryChanged:Connect(function(_, newParent)
+            if not newParent then
+                local idx = table.find(touchableParts, parent)
+                if idx then
+                    table.remove(touchableParts, idx)
+                    partCount -= 1
+                end
+            end
+        end)
+    end
+end
+
+-- Initialize sweep
+for _, inst in ipairs(tycoons:GetDescendants()) do
+    evaluateAndAdd(inst)
+end
+
+-- Listen for dynamic spawning
+tycoons.DescendantAdded:Connect(evaluateAndAdd)
+
+-- Cache Character Root
+local currentRoot: BasePart? = nil
+
+local function updateCharacterRoot(character: Model)
+    currentRoot = (character:WaitForChild("HumanoidRootPart", 5) 
+        or character:FindFirstChildWhichIsA("BasePart")) :: BasePart?
+end
+
+if localPlayer.Character then
+    updateCharacterRoot(localPlayer.Character)
+end
+
+localPlayer.CharacterAdded:Connect(updateCharacterRoot)
+localPlayer.CharacterRemoving:Connect(function()
+    currentRoot = nil
+end)
+
+-- Optimized High-Frequency Touch Execution Engine
+local function fireAllTouches()
+    local root = currentRoot
+    if not (root and root.Parent) then return end
+
+    -- Tight execution loop to maximize CPU pipeline efficiency
+    for i = 1, partCount do
+        local targetPart = touchableParts[i]
+        if targetPart and targetPart.Parent then
+            -- Rapid state toggles (0 = Touch Start, 1 = Touch End)
+            fireTouch(root, targetPart, 0)
+            fireTouch(root, targetPart, 1)
+            fireTouch(root, targetPart, 0)
+            fireTouch(root, targetPart, 1)
+        end
+    end
+end
+
+-- Execution Loop: Hook onto PostSimulation (Replaces redundant legacy Stepped/Heartbeat hooks)
+RunService.PostSimulation:Connect(fireAllTouches)
+
+-- Initial Execution Burst
+task.defer(function()
+    for _ = 1, 5 do
+        fireAllTouches()
+    end
+end)
+
+print("⚡ MODERNIZED TOUCH ENGINE ONLINE ⚡")
