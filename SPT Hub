@@ -129,7 +129,9 @@ local Scripts = {
         function() loadstring(game:HttpGet("https://raw.githubusercontent.com/MysteriousProgrammerOG/RobloxScripting/refs/heads/KillstreakSystemScripting/Loopkill", true))() 
         end, -- Loopkill - 8
         function() loadstring(game:HttpGet("https://raw.githubusercontent.com/MysteriousProgrammerOG/RobloxScripting/refs/heads/KillstreakSystemScripting/Looptools", true))() 
-        end, -- Looptools - 0
+        end, -- Looptools - 9
+        function() loadstring(game:HttpGet("https://raw.githubusercontent.com/MysteriousProgrammerOG/RobloxScripting/refs/heads/KillstreakSystemScripting/Reach",true))() 
+        end, -- Reach 10
     },
 }
 
@@ -184,3 +186,4 @@ pagedButton("Main", "Loopbring", UDim2.new(0, 330, 0, 60), 6)
 pagedButton("Main", "Anti Lag", UDim2.new(0, 10, 0, 110), 7)
 pagedButton("Main", "Loopkill", UDim2.new(0, 170, 0, 110), 8)
 pagedButton("Main", "Looptools", UDim2.new(0, 330, 0, 110), 9)
+pagedButton("Main", "Reach", UDim2.new(0, 10, 0 160), 10) 
